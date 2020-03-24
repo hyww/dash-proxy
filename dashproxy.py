@@ -133,8 +133,10 @@ class DashProxy(HasLogger):
         location = mpd.find('mpd:Location', ns)
         if location is not None:
             base_url = baseUrl(location.text)
-        baseUrlNode = mpd.find('mpd:BaseUrl', ns)
-        if baseUrlNode:
+        baseUrlNode = mpd.find('mpd:BaseURL', ns)
+        if baseUrlNode is None:
+            baseUrlNode = mpd.find('mpd:BaseUrl', ns)
+        if baseUrlNode is not None:
             if baseUrlNode.text.startswith('http://') or baseUrlNode.text.startswith('https://'):
                 base_url = baseUrl(baseUrlNode.text)
             else:
@@ -169,8 +171,11 @@ class DashProxy(HasLogger):
         else:
             self.info('Starting a downloader for %s' % (rep_addr,))
             downloader = DashDownloader(self, rep_addr)
+            logger.log(logging.INFO, 'node')
             self.downloaders[rep_addr] = downloader
+            logger.log(logging.INFO, 'node')
             downloader.handle_mpd(mpd, self.get_base_url(mpd))
+            logger.log(logging.INFO, 'node')
 
     def write_output_mpd(self, mpd):
         self.info('Writing the update MPD file')
@@ -245,10 +250,14 @@ class DashDownloader(HasLogger):
     def render_template(self, template, representation=None, segment=None):
         template = template.replace('$RepresentationID$', '{representation_id}')
         template = template.replace('$Time$', '{time}')
+        template = template.replace('$Bandwidth$', '{bandwidth}')
 
         args = {}
         if representation is not None:
             args['representation_id'] = representation.attrib.get('id', '')
+            bandwidth = representation.attrib.get('bandwidth', None)
+            if bandwidth is not None:
+                args['bandwidth'] = bandwidth
         if segment is not None:
             args['time'] = segment.attrib.get('t', '')
 
